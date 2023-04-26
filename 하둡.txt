@@ -1,0 +1,221 @@
+
+
+
+# hostname
+	호스트네임 확인
+
+# hostnamectl set-hostname 호스트명
+	호스트네임 변경
+
+# vi /etc/hosts
+	새롭게 IP와 호스트네임 입력
+
+
+# dnf install java-1.8.0-openjdk.x86_64 ant -y
+	CentOS8 과 호환되는 자바 버전 설치
+
+# java -version
+
+
+====노트북 설정=====
+
+# vi /etc/sysconfig/network-scripts/ifcfg-enp0s3(ran카드 이름)
+	내부에서 bootproto=static (수동설정)
+	IPADDR=아이피 주소
+	PREFIX=
+	GATEWAY=
+	DNS1=
+	DNS2=
+주의) 위 설정이 안되면
+bootproto=dhcp
+나머지 삭제
+
+주의2) 하둡 설치시 네트워크 설정을 확인하자
+본인의 컴퓨터와 다른 설정이면 안될 수 있다.
+
+# reboot
+이후 재실행
+
+# ping 으로 외부에 인터넷이 연결되는지 확인
+
+
+---------------------------------------------------------------
+
+# useradd 이름
+	유저 생성
+# passwd 이름
+	패스워드 설정
+
+
+# su 이름
+
+$ ssh-keygen -t rsa
+	나머지 설정은 엔터로 패스
+
+$ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+$ chmod 640 ~/.ssh/authorized_keys 
+
+$ ssh localhost
+	...? yes
+
+
+$ wget http:://apache.morror.cdnetworks.com/hadoop/common/hadoop/common/hadoop-3.3.3/hadoop-3.3.3.tar.gz
+
+
+$ tar -xvzf hadoop-3.3.3.tar.gz
+	압축풀기
+
+$ ln -s hadoop-3.3.3 hadoop
+
+
+$ vi ~/.bashrc
+export JAVA_HOME=/usr/lib/jvm/jre-1.8.0/
+export HADOOP_HOME=/home/hadoop/hadoop 
+export HADOOP_INSTALL=$HADOOP_HOME 
+export HADOOP_MAPRED_HOME=$HADOOP_HOME 
+export HADOOP_COMMON_HOME=$HADOOP_HOME 
+export HADOOP_HDFS_HOME=$HADOOP_HOME 
+export HADOOP_YARN_HOME=$HADOOP_HOME 
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native 
+export PATH=$PATH:$HADOOP_HOME/sbin:$HADOOP_HOME/bin 
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib/native"
+
+$ source ~/.bashrc
+
+$ vi $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+	38번째 줄 주석 제거후
+	export JAVA_HOME=/usr/lib/jvm/jre-1.8.0/
+
+
+--------------------------------------------------------------
+
+$ mkdir -p ~/hadoopdata/hdfs/namenode
+$ mkdir -p ~/hadoopdata/hdfs/datanode
+
+$ vi $HADOOP_HOME/etc/hadoop/core-site.xml
+<configuration>
+        <property>
+                <name>fs.defaultFS</name>
+                <value>hdfs://자신의 호스트이름:9000</value>
+        </property>
+</configuration>
+
+
+$ vi $HADOOP_HOME/etc/hadoop/hdfs-site.xml
+<configuration>
+        <property>
+                <name>dfs.replication</name>
+                <value>1</value>
+        </property>
+        <property>
+                <name>dfs.name.dir</name>
+                <value>file:///home/사용자이름/hadoopdata/hdfs/namenode</value>
+        </property>
+        <property>
+                <name>dfs.data.dir</name>
+                <value>file:///home/사용자이름/hadoopdata/hdfs/datanode</value>
+        </property>
+</configuration>
+
+
+
+$ vi $HADOOP_HOME/etc/hadoop/mapred-site.xml
+<configuration>
+        <property>
+                <name>mapreduce.framework.name</name>
+                <value>yarn</value>
+        </property>
+        <property>
+                <name>yarn.app.mapreduce.am.env</name>
+                <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+        </property>
+        <property>
+                <name>mapreduce.map.env</name>
+                <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+        </property>
+        <property>
+                <name>mapreduce.reduce.env</name>
+                <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+        </property>
+</configuration>
+
+
+
+$ vi $HADOOP_HOME/etc/hadoop/yarn-site.xml
+<configuration>
+        <property>
+                <name>yarn.nodemanager.aux-services</name>
+                <value>mapreduce_shuffle</value>
+        </property>
+        <property>
+                <name>yarn.nodemanager.vmem-check-enabled</name>
+                <value>false</value>
+        </property>
+</configuration>
+
+
+
+java 설치(dnf 명령어)
+
+hadoop 사용자 생성
+hadoop 사용자 > ssh 키 생성후 authorized_keys 추가 및 권한
+
+hadoop설치(wget으로 다운받고 tar 해제)
+링크를 생성(hadoop-3.3.3을 hadoop으로)
+vi ~/.bashrc 에서 여러 패키지의 경로 추가(export)
+source ~/.bashrc -> 파일 실행
+
+$HADOOP_HOME/etc/hadoop/hadoop.env.sh 실행
+Java 홈 디렉토리 설정
+
+Single Node 구성
+디렉토리 2개 생성 (namenode / datanode)
+core-site.xml(hdfs, mapred, yarn) 수정
+
+Hadoop 실행 및 테스트
+
+
+----------------------------------------------------------
+
+
+$ hdfs namenode -format
+
+
+$ start-dfs.sh
+
+$ start-yarn.sh
+
+$ jps
+
+
+--------------------------------------------------------------
+
+$ cd $HADOOP_HOME
+
+$ yarn jar share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.3.jar pi 16 1000
+
+
+# firewall-cmd --permanent --add-port=9870/tcp
+# firewall-cmd --permanent --add-port=8088/tcp
+
+# firewall-cmd --list-all
+ps) 안될경우
+# systemctl stop firewalld 로 잠시 꺼둔다.
+
+$ hdfs dfs -mkdir /test1
+$ hdfs dfs -mkdir /test2
+
+
+$ hdfs dfs -copyFromLocal $HADOOP_HOME/README.txt /input
+
+
+
+
+
+
+
+
+
+
+
